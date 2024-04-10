@@ -9,11 +9,11 @@ import (
 )
 
 type Config struct {
-	DbConfig dbConfig `yaml:"dbConfig" env-required:"true"`
+	DbConfig DbConfig `yaml:"dbConfig" env-required:"true"`
 	Server   Server   `yaml:"server"`
 }
 
-type dbConfig struct {
+type DbConfig struct {
 	DbUser  string `yaml:"user" env-required:"true"`
 	DbPass  string `yaml:"pass" env-required:"true"`
 	DbName  string `yaml:"dbName" env-required:"true"`
