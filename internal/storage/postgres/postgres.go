@@ -8,9 +8,6 @@ import (
 	"log/slog"
 )
 
-const minLenLogin = 5
-const minLenPass = 5
-
 type Storage struct {
 	db *sql.DB
 }
@@ -39,5 +36,3 @@ func (s *Storage) Close() error {
 func (s *Storage) Ping() error {
 	return s.db.Ping()
 }
-
-//func (s *Storage)

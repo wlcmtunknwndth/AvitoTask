@@ -4,21 +4,24 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/auth"
 )
 
-func (s *Storage) GetPassword(login string) (string, error) {
+const minLenUsername = 5
+const minLenPassword = 5
+
+func (s *Storage) GetPassword(username string) (string, error) {
 	const op = "storage.postgres.GetPassword"
-	if len(login) < minLenLogin {
-		return "", fmt.Errorf("%s: login is too short", op)
+	if len(username) < minLenUsername {
+		return "", fmt.Errorf("%s: username is too short", op)
 	}
 	stmt, err := s.db.Prepare(getPassword)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	var t string
 	var pass string
-	err = stmt.QueryRow(login).Scan(&t, &pass)
+	err = stmt.QueryRow(username).Scan(&pass)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
@@ -28,23 +31,23 @@ func (s *Storage) GetPassword(login string) (string, error) {
 	return pass, err
 }
 
-func (s *Storage) RegisterUser(login, pass string) error {
+func (s *Storage) RegisterUser(usr *auth.User) error {
 	const op = "storage.postgres.RegisterUser"
-	if len(login) < minLenLogin {
-		return fmt.Errorf("%s: Invalid login", login)
+	if len(usr.Username) < minLenUsername {
+		return fmt.Errorf("%s: Invalid login", usr.Username)
 	}
-	if len(pass) < minLenPass {
-		return fmt.Errorf("%s: Invalid password", login)
+	if len(usr.Password) < minLenPassword {
+		return fmt.Errorf("%s: Invalid password", usr.Password)
 	}
 
-	_, err := s.db.Exec(registerUser, login, pass)
+	_, err := s.db.Exec(registerUser, usr.Username, usr.Password)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
 }
 
-func (s *Storage) DeleteUser(login string) error {
+func (s *Storage) DeleteUser(username string) error {
 	const op = "storage.postgres.DeleteUser"
 
 	stmt, err := s.db.Prepare(deleteUser)
@@ -52,9 +55,26 @@ func (s *Storage) DeleteUser(login string) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = stmt.Exec(login)
+	_, err = stmt.Exec(username)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
+}
+
+func (s *Storage) IsAdmin(username string) bool {
+	if len(username) < minLenUsername {
+		return false
+	}
+	var ans bool
+	stmt, err := s.db.Prepare(isAdmin)
+	if err != nil {
+		return false
+	}
+
+	err = stmt.QueryRow(username).Scan(&ans)
+	if err != nil {
+		return false
+	}
+	return ans
 }

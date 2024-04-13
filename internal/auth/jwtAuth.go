@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpErrors"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpResponse"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,13 +14,9 @@ import (
 
 var Key, _ = os.LookupEnv("secret_key")
 
-type User struct {
-	Username string `bson:"username" json:"username"`
-	Password string `bson:"password" json:"password"`
-}
-
 type Info struct {
 	Username string `json:"username"`
+	IsAdmin  bool   `json:"isAdmin"`
 	jwt.RegisteredClaims
 }
 
@@ -27,7 +25,7 @@ const (
 	AccessToken  = "access"
 	RefreshToken = "refresh"
 
-	TtlAccess  = 2
+	TtlAccess  = 4
 	TtlRefresh = 5
 )
 
@@ -68,21 +66,19 @@ func checkRequest(w http.ResponseWriter, r *http.Request, cookieName string) (*I
 	return &info, nil
 }
 
-func Access(w http.ResponseWriter, r *http.Request) bool {
+func Access(w http.ResponseWriter, r *http.Request) (*Info, error) {
+	const op = "auth.jwtAuth.Access"
 	info, err := checkRequest(w, r, AccessToken)
 	if err != nil {
-		slog.Error("wasn't able to find token: ", err)
-		return false
+		httpResponse.WriteResponse(w, http.StatusUnauthorized, httpErrors.Error401)
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-	if _, err = w.Write([]byte(fmt.Sprintf("User %s authorized", info.Username))); err != nil {
-		slog.Info("couldn't reply to user ", info.Username)
-		return false
-	}
-	return true
+
+	return info, nil
 }
 
 func Refresh(w http.ResponseWriter, r *http.Request) {
-	info, err := checkRequest(w, r, RefreshToken)
+	info, err := checkRequest(w, r, AccessToken)
 	if err != nil {
 		return
 	}
@@ -102,7 +98,8 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 
 	tokenStr, err := token.SignedString([]byte(Key))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		//w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -112,16 +109,13 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 		Expires: expiresAt,
 	})
 
-	if _, err = w.Write([]byte(fmt.Sprintf("User %s has got a new access token", info.Username))); err != nil {
-		slog.Error(`couldn't write a message to {info.Username}`)
-	}
 }
 
 func WriteNewToken(w http.ResponseWriter, usr User, tokenName string) {
 	var expireAt time.Time
 	switch tokenName {
-	case RefreshToken:
-		expireAt = time.Now().Add(TtlRefresh * time.Minute)
+	//case RefreshToken:
+	//	expireAt = time.Now().Add(TtlRefresh * time.Minute)
 	case AccessToken:
 		expireAt = time.Now().Add(TtlAccess * time.Minute)
 	default:
@@ -130,6 +124,7 @@ func WriteNewToken(w http.ResponseWriter, usr User, tokenName string) {
 
 	inf := &Info{
 		Username: usr.Username,
+		IsAdmin:  usr.admin,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expireAt),
 		},
@@ -139,8 +134,7 @@ func WriteNewToken(w http.ResponseWriter, usr User, tokenName string) {
 
 	tokenStr, err := token.SignedString([]byte(Key))
 	if err != nil {
-		slog.Error("error generating ", tokenName, "token: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
 		return
 	}
 
@@ -150,3 +144,30 @@ func WriteNewToken(w http.ResponseWriter, usr User, tokenName string) {
 		Expires: expireAt,
 	})
 }
+
+//
+//func WriteBothTokens(w http.ResponseWriter, usr *User) {
+//	var expireAt time.Time
+//	inf := &Info{
+//		Username: usr.Username,
+//		RegisteredClaims: jwt.RegisteredClaims{
+//			ExpiresAt: jwt.NewNumericDate(expireAt),
+//		},
+//	}
+//
+//	token := jwt.NewWithClaims(jwt.SigningMethodHS512, inf)
+//
+//	tokenStr, err := token.SignedString([]byte(Key))
+//	if err != nil {
+//		httpResponse.WriteResponse(w, http.StatusInternalServerError, "couldn't send access tokens")
+//		return
+//	}
+//
+//	http.SetCookie(w, &http.Cookie{
+//		Name:    tokenName,
+//		Value:   tokenStr,
+//		Expires: expireAt,
+//	})
+//
+//	//http.Set
+//}

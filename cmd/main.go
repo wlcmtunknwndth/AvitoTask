@@ -3,11 +3,15 @@ package main
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/auth"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/cacher"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/config"
-	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/slogError"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/handlers"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/slogAttr"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/storage/postgres"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -15,14 +19,16 @@ func main() {
 
 	pgsql, err := postgres.New(cfg.DbConfig)
 	if err != nil {
-		slog.Error("couldn't run postgres ", slogError.Err(err))
+		slog.Error("couldn't run postgres ", slogAttr.Err(err))
 	}
 	defer func(storage *postgres.Storage) {
 		err = storage.Close()
 		if err != nil {
-			slog.Error("couldn't close postgres: ", slogError.Err(err))
+			slog.Error("couldn't close postgres: ", slogAttr.Err(err))
 		}
 	}(pgsql)
+
+	authService := auth.Auth{Db: pgsql}
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID) // adds requestID to logs
@@ -38,8 +44,27 @@ func main() {
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
+	router.Post("/register", authService.Register)
+	router.Post("/login", authService.LogIn)
+	router.Post("/logout", authService.LogOut)
+
+	cacherHandler := cacher.New(pgsql, 5*time.Minute, 20*time.Minute)
+	//err = cacherHandler.Restore()
+	err = cacherHandler.Restore()
+	if err != nil {
+		slog.Error("couldn't restore cache: ", slogAttr.Err(err))
+		return
+	}
+	slog.Info("cache restored")
+
+	httpHandler := handlers.NewHandler(pgsql, cacherHandler)
+
+	router.Get("/user_banner", httpHandler.UserBanner)
+	router.Get("/banner", httpHandler.BannerGet)
+	router.Post("/banner", httpHandler.BannerPost)
+
 	if err = srv.ListenAndServe(); err != nil {
-		slog.Error("failed to run server: ", slogError.Err(err))
+		slog.Error("failed to run server: ", slogAttr.Err(err))
 	}
 	slog.Info("application finished")
 }
