@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/auth"
-	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpErrors"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpResponse"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/slogAttr"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/storage"
@@ -23,9 +22,13 @@ func (h *Handler) BannerGet(w http.ResponseWriter, r *http.Request) {
 	const op = "handlers.banner.BannerGet"
 
 	info, err := auth.Access(w, r)
-	if err != nil || !info.IsAdmin {
+	if err != nil {
 		slog.Error("couldn't handle access token: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-		httpResponse.WriteResponse(w, http.StatusUnauthorized, httpErrors.Error401)
+		httpResponse.WriteResponse(w, http.StatusUnauthorized, statusUnauthorized)
+		return
+	}
+	if !info.IsAdmin {
+		httpResponse.WriteResponse(w, http.StatusForbidden, statusNoAccess)
 		return
 	}
 
@@ -40,7 +43,7 @@ func (h *Handler) BannerGet(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("error decoding request: ", err)
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 
@@ -48,15 +51,16 @@ func (h *Handler) BannerGet(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &qry)
 	if err != nil {
 		slog.Error("couldn't unmarshall body: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 
+	defer httpResponse.WriteResponse(w, http.StatusOK, statusOK)
 	if qry.TagId != 0 && qry.FeatureId != 0 {
 		banner, err := h.db.GetBanner(qry.FeatureId, qry.TagId)
 		if err != nil {
 			slog.Error("couldn't get banner: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-			httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+			httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 			return
 		}
 		h.cacher.CacheOrder(*banner)
@@ -65,7 +69,7 @@ func (h *Handler) BannerGet(w http.ResponseWriter, r *http.Request) {
 		banners, err := h.db.GetBannersByFeature(qry.FeatureId)
 		if err != nil {
 			slog.Error("couldn't get banners by feature: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-			httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+			httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 			return
 		}
 		h.WriteBanners(w, banners)
@@ -74,12 +78,12 @@ func (h *Handler) BannerGet(w http.ResponseWriter, r *http.Request) {
 		banners, err := h.db.GetBannersByTag(qry.TagId)
 		if err != nil {
 			slog.Error("couldn't get banners by feature: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-			httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+			httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 			return
 		}
 		h.WriteBanners(w, banners)
 	} else {
-		httpResponse.WriteResponse(w, http.StatusBadRequest, httpErrors.Error400)
+		httpResponse.WriteResponse(w, http.StatusBadRequest, statusBadRequest)
 	}
 
 }
@@ -90,7 +94,7 @@ func (h *Handler) BannerPost(w http.ResponseWriter, r *http.Request) {
 	info, err := auth.Access(w, r)
 	if err != nil || !info.IsAdmin {
 		slog.Error("couldn't handle access token: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-		httpResponse.WriteResponse(w, http.StatusUnauthorized, httpErrors.Error401)
+		httpResponse.WriteResponse(w, http.StatusUnauthorized, statusUnauthorized)
 		return
 	}
 
@@ -105,7 +109,7 @@ func (h *Handler) BannerPost(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("error decoding request: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 
@@ -113,16 +117,16 @@ func (h *Handler) BannerPost(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &banner)
 	if err != nil {
 		slog.Error("error unmarshalling request:", slogAttr.OpInfo(op), slogAttr.Err(err))
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 
 	err = h.db.SaveBanner(&banner)
 	if err != nil {
 		slog.Error("error unmarshalling request:", slogAttr.OpInfo(op), slogAttr.Err(err))
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 	h.cacher.CacheOrder(banner)
-
+	httpResponse.WriteResponse(w, http.StatusOK, statusOK)
 }

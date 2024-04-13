@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpErrors"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpResponse"
 	"log/slog"
 	"net/http"
@@ -22,11 +21,10 @@ type Info struct {
 
 // TimeToLive == Ttl
 const (
-	AccessToken  = "access"
-	RefreshToken = "refresh"
-
-	TtlAccess  = 4
-	TtlRefresh = 5
+	AccessToken        = "access"
+	TtlAccess          = 4
+	StatusUnauthorized = "Unauthorized"
+	statusBadRequest   = "Bad request"
 )
 
 func checkRequest(w http.ResponseWriter, r *http.Request, cookieName string) (*Info, error) {
@@ -34,10 +32,10 @@ func checkRequest(w http.ResponseWriter, r *http.Request, cookieName string) (*I
 	if err != nil {
 		slog.Error("error looking for cookies: ", err)
 		if errors.Is(err, http.ErrNoCookie) {
-			w.WriteHeader(http.StatusUnauthorized)
+			httpResponse.WriteResponse(w, http.StatusUnauthorized, StatusUnauthorized)
 			return nil, err
 		}
-		w.WriteHeader(http.StatusBadRequest)
+		httpResponse.WriteResponse(w, http.StatusBadRequest, statusBadRequest)
 		return nil, fmt.Errorf("no cookies found: %s", err)
 	}
 
@@ -52,15 +50,15 @@ func checkRequest(w http.ResponseWriter, r *http.Request, cookieName string) (*I
 	if err != nil {
 		slog.Error("couldn't parse jwt: ", err)
 		if errors.Is(err, jwt.ErrSignatureInvalid) {
-			w.WriteHeader(http.StatusUnauthorized)
+			httpResponse.WriteResponse(w, http.StatusUnauthorized, StatusUnauthorized)
 			return nil, err
 		}
-		w.WriteHeader(http.StatusBadRequest)
+		httpResponse.WriteResponse(w, http.StatusBadRequest, statusBadRequest)
 		return nil, fmt.Errorf("auth error: %s", err)
 	}
 
 	if !token.Valid {
-		w.WriteHeader(http.StatusUnauthorized)
+		httpResponse.WriteResponse(w, http.StatusUnauthorized, StatusUnauthorized)
 		return nil, fmt.Errorf("the token is invalid")
 	}
 	return &info, nil
@@ -70,7 +68,7 @@ func Access(w http.ResponseWriter, r *http.Request) (*Info, error) {
 	const op = "auth.jwtAuth.Access"
 	info, err := checkRequest(w, r, AccessToken)
 	if err != nil {
-		httpResponse.WriteResponse(w, http.StatusUnauthorized, httpErrors.Error401)
+		httpResponse.WriteResponse(w, http.StatusUnauthorized, StatusUnauthorized)
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -98,7 +96,7 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 
 	tokenStr, err := token.SignedString([]byte(Key))
 	if err != nil {
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusUnauthorized, StatusUnauthorized)
 		//w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -134,7 +132,7 @@ func WriteNewToken(w http.ResponseWriter, usr User, tokenName string) {
 
 	tokenStr, err := token.SignedString([]byte(Key))
 	if err != nil {
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, StatusUnauthorized)
 		return
 	}
 
@@ -144,30 +142,3 @@ func WriteNewToken(w http.ResponseWriter, usr User, tokenName string) {
 		Expires: expireAt,
 	})
 }
-
-//
-//func WriteBothTokens(w http.ResponseWriter, usr *User) {
-//	var expireAt time.Time
-//	inf := &Info{
-//		Username: usr.Username,
-//		RegisteredClaims: jwt.RegisteredClaims{
-//			ExpiresAt: jwt.NewNumericDate(expireAt),
-//		},
-//	}
-//
-//	token := jwt.NewWithClaims(jwt.SigningMethodHS512, inf)
-//
-//	tokenStr, err := token.SignedString([]byte(Key))
-//	if err != nil {
-//		httpResponse.WriteResponse(w, http.StatusInternalServerError, "couldn't send access tokens")
-//		return
-//	}
-//
-//	http.SetCookie(w, &http.Cookie{
-//		Name:    tokenName,
-//		Value:   tokenStr,
-//		Expires: expireAt,
-//	})
-//
-//	//http.Set
-//}

@@ -57,11 +57,28 @@ func main() {
 	}
 	slog.Info("cache restored")
 
+	//time.NewTimer()
+	go func(cache *cacher.Cacher) {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				err := cache.SaveCache()
+				if err != nil {
+					continue
+				}
+			}
+		}
+	}(cacherHandler)
+
 	httpHandler := handlers.NewHandler(pgsql, cacherHandler)
 
 	router.Get("/user_banner", httpHandler.UserBanner)
 	router.Get("/banner", httpHandler.BannerGet)
 	router.Post("/banner", httpHandler.BannerPost)
+	router.Patch("/banner/{id}", httpHandler.BannerPatch)
+	router.Delete("/delete", httpHandler.DeleteBanner)
 
 	if err = srv.ListenAndServe(); err != nil {
 		slog.Error("failed to run server: ", slogAttr.Err(err))

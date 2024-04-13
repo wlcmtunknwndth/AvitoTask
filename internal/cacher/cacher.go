@@ -3,6 +3,7 @@ package cacher
 import (
 	"fmt"
 	"github.com/patrickmn/go-cache"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/slogAttr"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/storage"
 	"log/slog"
 	"time"
@@ -49,7 +50,7 @@ func (c *Cacher) onEvicted(uuid string, data any) {
 	delete(cached, uuid)
 	err := c.db.DeleteCache(uuid)
 	if err != nil {
-		slog.Error("couldn't delete order from cache")
+		slog.Error("couldn't delete order from cache", slogAttr.Err(err))
 	}
 }
 

@@ -78,3 +78,37 @@ func (s *Storage) GetBannersByTag(tag uint) ([]storage.Banner, error) {
 
 	return banners, nil
 }
+
+func (s *Storage) GetBannerById(id uint) (*storage.Banner, error) {
+	const op = "storage.postgres.GetBannerById"
+
+	var banner storage.Banner
+
+	row, err := s.db.Query(getBannerById, id)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = row.Scan(&banner.Id, &banner.FeatureId, &banner.Tag, &banner.Title, &banner.Text, &banner.Url)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return &banner, nil
+}
+
+func (s *Storage) UpdateBannerById(id uint, banner *storage.Banner) error {
+	const op = "storage.postgres.UpdateBannerById"
+
+	stmt, err := s.db.Prepare(updateBanner)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = stmt.Exec(banner.FeatureId, banner.Tag, banner.Title, banner.Text, banner.Url, id)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}

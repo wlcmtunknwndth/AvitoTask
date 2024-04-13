@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/auth"
-	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpErrors"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpResponse"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/slogAttr"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/storage"
@@ -25,7 +24,7 @@ func (h *Handler) UserBanner(w http.ResponseWriter, r *http.Request) {
 	info, err := auth.Access(w, r)
 	if err != nil {
 		slog.Error("couldn't handle access token: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-		httpResponse.WriteResponse(w, http.StatusUnauthorized, httpErrors.Error401)
+		httpResponse.WriteResponse(w, http.StatusUnauthorized, statusUnauthorized)
 		return
 	}
 
@@ -40,7 +39,7 @@ func (h *Handler) UserBanner(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("error decoding request: ", err)
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 
@@ -48,7 +47,7 @@ func (h *Handler) UserBanner(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &qry)
 	if err != nil {
 		slog.Error("couldn't unmarshall body: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 
@@ -57,7 +56,8 @@ func (h *Handler) UserBanner(w http.ResponseWriter, r *http.Request) {
 		banner, err = h.db.GetBanner(qry.FeatureId, qry.TagId)
 		if err != nil {
 			slog.Error("couldn't find banner: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-			httpResponse.WriteResponse(w, http.StatusNotFound, httpErrors.Error404)
+			httpResponse.WriteResponse(w, http.StatusNotFound, statusNotFound)
+			return
 		}
 		h.cacher.CacheOrder(*banner)
 
@@ -69,12 +69,15 @@ func (h *Handler) UserBanner(w http.ResponseWriter, r *http.Request) {
 			banner, err = h.db.GetBanner(qry.FeatureId, qry.TagId)
 			if err != nil {
 				slog.Error("couldn't find banner: ", slogAttr.OpInfo(op), slogAttr.Err(err))
-				httpResponse.WriteResponse(w, http.StatusNotFound, httpErrors.Error404)
+				httpResponse.WriteResponse(w, http.StatusNotFound, statusNotFound)
 				return
 			}
 			h.cacher.CacheOrder(*banner)
+		} else {
+			slog.Info("sent cached order")
 		}
 	}
 
 	h.WriteBanner(w, banner)
+	httpResponse.WriteResponse(w, http.StatusOK, statusOK)
 }

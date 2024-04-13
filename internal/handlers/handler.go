@@ -8,6 +8,16 @@ import (
 	"net/http"
 )
 
+const (
+	statusOK                  = "OK"
+	statusDeleted             = "Banner has been successfully deleted" // 204
+	statusBadRequest          = "Bad request"                          // 400
+	statusNotFound            = "Banner wasn't found"                  // 400
+	statusUnauthorized        = "User unauthorized"                    // 401
+	statusNoAccess            = "User has no access"                   // 403
+	statusInternalServerError = "Internal server error"                // 500
+)
+
 type Storage interface {
 	GetPassword(login string) (string, error)
 	//RegisterUser(usr *auth.User) error
@@ -18,6 +28,7 @@ type Storage interface {
 	GetBanner(featureId, tag uint) (*storage.Banner, error)
 	GetBannersByFeature(featureId uint) ([]storage.Banner, error)
 	GetBannersByTag(tag uint) ([]storage.Banner, error)
+	UpdateBannerById(id uint, banner *storage.Banner) error
 }
 
 type Cacher interface {

@@ -9,7 +9,9 @@ const (
 	getBanner          = "SELECT * FROM Banners WHERE feature_id = $1 AND tag = $2"
 	getBannerByFeature = "SELECT * FROM Banners WHERE feature_id = $1"
 	getBannerByTag     = "SELECT * FROM Banners WHERE tag = $1"
+	getBannerById      = "SELECT * FROM Banners WHERE id = $1"
 	saveBanner         = "INSERT INTO Banners(feature_id, tag, title, text, url) VALUES($1, $2, $3, $4, $5)"
+	updateBanner       = "UPDATE Banners SET feature_id = $1, tag = $2, title = $3, text = $4, url = $5 WHERE id = $6"
 	deleteBanner       = "DELETE FROM Banners WHERE id = $1"
 
 	restoreCache    = "SELECT * FROM Cache"
