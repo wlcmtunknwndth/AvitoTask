@@ -47,6 +47,7 @@ func main() {
 	router.Post("/register", authService.Register)
 	router.Post("/login", authService.LogIn)
 	router.Post("/logout", authService.LogOut)
+	router.Post("/refresh", auth.Refresh)
 
 	cacherHandler := cacher.New(pgsql, 5*time.Minute, 20*time.Minute)
 	//err = cacherHandler.Restore()
