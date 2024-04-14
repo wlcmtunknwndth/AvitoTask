@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpErrors"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/httpResponse"
 	"github.com/wlcmtunknwndth/AvitoTask/internal/storage"
 	"net/http"
@@ -54,12 +53,12 @@ func (h *Handler) WriteBanner(w http.ResponseWriter, banner *storage.Banner) {
 	const op = "handler.WriteBanner"
 	data, err := json.Marshal(banner)
 	if err != nil {
-		httpResponse.WriteResponse(w, http.StatusNotFound, httpErrors.Error404)
+		httpResponse.WriteResponse(w, http.StatusNotFound, statusNotFound)
 		return
 	}
 	_, err = w.Write(data)
 	if err != nil {
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 }
@@ -68,12 +67,12 @@ func (h *Handler) WriteBanners(w http.ResponseWriter, banners []storage.Banner) 
 	const op = "handler.WriteBanners"
 	data, err := json.Marshal(banners)
 	if err != nil {
-		httpResponse.WriteResponse(w, http.StatusNotFound, httpErrors.Error404)
+		httpResponse.WriteResponse(w, http.StatusNotFound, statusNotFound)
 		return
 	}
 	_, err = w.Write(data)
 	if err != nil {
-		httpResponse.WriteResponse(w, http.StatusInternalServerError, httpErrors.Error500)
+		httpResponse.WriteResponse(w, http.StatusInternalServerError, statusInternalServerError)
 		return
 	}
 }

@@ -5,5 +5,5 @@ server:
 dbConfig:
   user: "postgres"
   pass: "liza"
-  dbName: "Avito"
+  dbName: "postgres"
   sslmode: "disable"

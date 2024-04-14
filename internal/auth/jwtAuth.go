@@ -112,8 +112,6 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 func WriteNewToken(w http.ResponseWriter, usr User, tokenName string) {
 	var expireAt time.Time
 	switch tokenName {
-	//case RefreshToken:
-	//	expireAt = time.Now().Add(TtlRefresh * time.Minute)
 	case AccessToken:
 		expireAt = time.Now().Add(TtlAccess * time.Minute)
 	default:

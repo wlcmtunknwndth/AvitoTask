@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/joho/godotenv"
+	"github.com/wlcmtunknwndth/AvitoTask/internal/lib/slogAttr"
 	"log/slog"
 	"os"
 	"time"
@@ -29,26 +29,27 @@ type Server struct {
 const op = "config.MustLoad: "
 
 func MustLoad() *Config {
-	if err := godotenv.Load("local.env"); err != nil {
-		slog.Error(op, err)
-		os.Exit(400)
-	}
+	const op = "config.MustLoad"
+	//if err := godotenv.Load("local.env"); err != nil {
+	//	slog.Error(op, err)
+	//	os.Exit(400)
+	//}
 
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
-		slog.Error(op, slog.String("env", "is empty"))
+		slog.Error("couldn't load config path", slogAttr.OpInfo(op))
 		os.Exit(404)
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		slog.Error(op, slog.String("config", "doesn't exist"))
+		slog.Error("couldn't find config file", slogAttr.OpInfo(op), slogAttr.Err(err))
 		os.Exit(404)
 	}
 
 	var cfg Config
 
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		slog.Error(op, slog.String("path", "couldn't find config path"))
+		slog.Error("couldn't read config file", slogAttr.OpInfo(op), slogAttr.Err(err))
 		os.Exit(400)
 	}
 	return &cfg

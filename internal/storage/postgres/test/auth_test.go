@@ -21,7 +21,7 @@ func TestPostgresInit(t *testing.T) {
 	defer func(storage *postgres.Storage) {
 		err := storage.Close()
 		if err != nil {
-			t.Errorf("couldn't close DB: %s", err)
+			t.Errorf("couldn't close db: %s", err)
 		}
 	}(storage)
 }
@@ -58,7 +58,7 @@ func TestRegisterUser(t *testing.T) {
 	defer func(storage *postgres.Storage) {
 		err := storage.Close()
 		if err != nil {
-			t.Errorf("couldn't close DB: %s", err)
+			t.Errorf("couldn't close db: %s", err)
 		}
 	}(storage)
 
@@ -87,7 +87,7 @@ func TestGetPassword(t *testing.T) {
 	defer func(storage *postgres.Storage) {
 		err := storage.Close()
 		if err != nil {
-			t.Errorf("couldn't close DB: %s", err)
+			t.Errorf("couldn't close db: %s", err)
 		}
 	}(storage)
 
